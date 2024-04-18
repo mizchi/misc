@@ -332,11 +332,11 @@ if (import.meta.main) {
 
     // // deno publish
     if (selectedOptions.some((o) => o.id === "RELEASE_JSR")) {
-      if (yes || confirm(`jsr publish?`)) {
+      if (yes || confirm(`deno publish?`)) {
         if (parsed.values.dry) {
-          log(`dry: deno publish --no-check --allow-net --allow-read --allow-write --allow-env --allow-run`);
+          log(`dry: deno publish`);
         } else {
-          await $`deno publish --no-check --allow-net --allow-read --allow-write --allow-env --allow-run`;
+          await $`deno publish`;
         }
       }
     }
