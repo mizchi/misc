@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "test": "deno test",
+    "release": "zdnt release"
+  }
+}
