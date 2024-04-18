@@ -1,5 +1,5 @@
 import { expect } from "https://deno.land/std@0.214.0/expect/expect.ts";
-import { tpl, each, when } from "./tpl.ts";
+import { tpl, each, when } from "./mod.ts";
 
 Deno.test('complex', () => {
   const t1 = tpl`
