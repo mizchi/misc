@@ -3,10 +3,9 @@
 Zero Config Dnt wrapper
 
 ```bash
-$ deno install -Afg https://raw.githubusercontent.com/mizchi/misc/main/zdnt/zdnt.ts
+# $ deno install -Afg https://raw.githubusercontent.com/mizchi/misc/main/zdnt/zdnt.ts
 # Currently jsr.io does not support cli install
-# $ deno install -Afg https://jsr.io/@mizchi/zdnt/0.0.4/zdnt.ts
-
+$ deno install -Afg jsr:@mizchi/zdnt
 ```
 
 ## Usage
