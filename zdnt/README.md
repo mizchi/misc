@@ -3,12 +3,25 @@
 Zero Config Dnt wrapper
 
 ```bash
-$ deno install -Afg https://jsr.io/@mizchi/zdnt/0.0.4/zdnt.ts
+$ deno install -Afg https://raw.githubusercontent.com/mizchi/misc/main/zdnt/zdnt.ts
+# Currently jsr.io does not support cli install
+# $ deno install -Afg https://jsr.io/@mizchi/zdnt/0.0.4/zdnt.ts
+
 ```
 
 ## Usage
 
-put `mod.ts`
+put `mod.ts` and deno.json
+
+deno.json
+
+```json
+{
+  "name": "@mizchi/zdnt",
+  "version": "0.0.1",
+  "exports": "./mod.ts"
+}
+```
 
 ```bash
 $ zdnt # just build
