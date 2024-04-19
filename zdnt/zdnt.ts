@@ -329,7 +329,7 @@ if (import.meta.main) {
     // update README.md
     if (selectedOptions.some((o) => o.id === "GIT_COMMIT")) {
       await $`git add README.md ${params.using.usingFile}`;
-      await $`git commit -m "v${nextVersion}`;
+      await $`git commit -m "v${nextVersion}"`;
     }
 
     // git tag
