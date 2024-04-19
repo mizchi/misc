@@ -1,2 +1,3 @@
 // CLI Package
-export { }
+// export { }
+import "./zdnt.ts";
