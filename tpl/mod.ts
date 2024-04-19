@@ -160,7 +160,7 @@ export function tpl<
   return fn;
 }
 
-export function dedent(str: string) {
+function dedent(str: string): string {
   const matched = str.match(/^[ \t]*(?=\S)/gm);
   if (!matched) {
     return str;
@@ -171,7 +171,7 @@ export function dedent(str: string) {
   return result.replaceAll(/^\n/g, '');
 }
 
-export function indent(str: string, count: number) {
+function indent(str: string, count: number): string {
   if (count === 0) return str;
   const prefix = ' '.repeat(count);
   return str.split('\n').map((x, idx) => {
@@ -180,7 +180,7 @@ export function indent(str: string, count: number) {
   }).join('\n');
 }
 
-function getMinIndent(str: string) {
+function getMinIndent(str: string): number {
   const match = str.match(/^[ \t]*(?=\S)/gm);
   if (!match) {
     return 0;
