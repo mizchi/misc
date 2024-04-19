@@ -1,12 +1,11 @@
-import { join } from 'https://deno.land/std@0.223.0/path/mod.ts';
+import { join } from 'jsr:@std/path@0.223.0';
 // ex. scripts/build_npm.ts
-import { exists } from "https://deno.land/std@0.213.0/fs/exists.ts";
-import * as dnt from "https://deno.land/x/dnt@0.40.0/mod.ts";
-import $ from 'https://deno.land/x/dax@0.39.2/mod.ts';
-import { parse, increment, format, reverseSort, type ReleaseType, compare } from "https://deno.land/std@0.214.0/semver/mod.ts";
-import { path } from 'https://deno.land/x/dax@0.39.2/src/deps.ts';
+import { exists } from "jsr:@std/fs@0.223.0";
+import * as dnt from "jsr:@deno/dnt@0.41.1";
+import $ from 'jsr:@david/dax';
+import { parse, increment, format, type ReleaseType } from "jsr:@std/semver@0.223.0";
 import { parseArgs } from "node:util";
-import prettier from "npm:prettier@2.4.1";
+// import prettier from "npm:prettier@2.4.1";
 import json5 from "npm:json5@2.2.0";
 import json5writer from "npm:json5-writer@0.2.0";
 
@@ -115,19 +114,19 @@ export async function getModuleParams(root: string): Promise<ModuleParams> {
   }
 }
 
-async function getVersionFromGitTag(): Promise<string | undefined> {
-  const tags = await $`git tag`.lines();
-  const versions = tags
-    .filter((tag: string) => tag.startsWith('v'))
-    .map((tag: string) => tag.slice(1))
-    .map(parse);
+// async function getVersionFromGitTag(): Promise<string | undefined> {
+//   const tags = await $`git tag`.lines();
+//   const versions = tags
+//     .filter((tag: string) => tag.startsWith('v'))
+//     .map((tag: string) => tag.slice(1))
+//     .map(parse);
 
-  // get latest
-  const v = reverseSort(versions)[0];
-  if (v) {
-    return format(v);
-  }
-}
+//   // get latest
+//   const v = reverseSort(versions)[0];
+//   if (v) {
+//     return format(v);
+//   }
+// }
 
 export async function build_npm(opts: ZdntOptions) {
   await dnt.emptyDir("./npm");
@@ -155,7 +154,7 @@ export async function build_npm(opts: ZdntOptions) {
 }
 
 async function updateReadmeVersion(moduleName: string, version: string, dryrun = false) {
-  const readmePath = path.join(Deno.cwd(), "README.md");
+  const readmePath = join(Deno.cwd(), "README.md");
   const readme = Deno.readTextFileSync(readmePath);
   const updated = readme.replaceAll(
     new RegExp(`${moduleName}@[^/]+`, 'g'),
