@@ -296,6 +296,8 @@ if (import.meta.main) {
       id: "WRITE_JSON", text: `Write deno.json's version to ${nextVersion} `, selected: true,
     },
     { id: "WRITE_README", text: `Write README's version to ${nextVersion}`, selected: true },
+    { id: "GIT_COMMIT", text: `Git commit READEM.md and deno.json ${nextVersion}`, selected: true },
+
     { id: "RELEASE_JSR", text: "Release to jsr.io", selected: true },
     { id: "RELEASE_NPM", text: "Release to npm", selected: true },
 
@@ -322,6 +324,12 @@ if (import.meta.main) {
     // update README.md
     if (selectedOptions.some((o) => o.id === "WRITE_README")) {
       await updateReadmeVersion(params.name!, nextVersion, parsed.values.dry);
+    }
+
+    // update README.md
+    if (selectedOptions.some((o) => o.id === "GIT_COMMIT")) {
+      await $`git add README.md ${params.using.usingFile}`;
+      await $`git commit -m "v${nextVersion}"`;
     }
 
     // git tag
