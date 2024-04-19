@@ -232,7 +232,7 @@ if (import.meta.main) {
 
   if (first === "new") {
     const target = parsed.positionals[1];
-    const user = parsed.values.user ?? Deno.env.get("JSR_USER") ?? "username";
+    const user = parsed.values.user ?? Deno.env.get("DENO_USER") ?? "username";
     if (!target) { throw new Error("target is required") }
     // create zdnt template
     await $`mkdir -p ${target}`;
@@ -245,10 +245,13 @@ if (import.meta.main) {
 
     await Deno.writeTextFile(join(root, target, "mod.ts"), MOD_TS());
     await Deno.writeTextFile(join(root, target, "mod.test.ts"), MOD_TEST_TS(target));
-    await Deno.writeTextFile(join(root, target, "jsr.json"), JSON.stringify(
-      { name: `@${user}/${target}`, version: "0.0.0", "exports": "./mod.ts" }
-      , null, 2));
+    // await Deno.writeTextFile(join(root, target, "jsr.json"), JSON.stringify(
+    //   { name: `@${user}/${target}`, version: "0.0.0", "exports": "./mod.ts" }
+    //   , null, 2));
     await Deno.writeTextFile(join(root, target, "deno.json"), JSON.stringify({
+      name: `@${user}/${target}`,
+      version: "0.0.0",
+      "exports": "./mod.ts",
       "tasks": {
         "test": "deno test",
         "release": "zdnt release",
@@ -290,7 +293,7 @@ if (import.meta.main) {
 
   const options = [
     {
-      id: "WRITE_JSON", text: `Write jsr.json's version to ${nextVersion} `, selected: true,
+      id: "WRITE_JSON", text: `Write deno.json's version to ${nextVersion} `, selected: true,
     },
     { id: "WRITE_README", text: `Write README's version to ${nextVersion}`, selected: true },
     { id: "RELEASE_JSR", text: "Release to jsr.io", selected: true },
