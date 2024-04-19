@@ -1,6 +1,6 @@
 {
   "name": "@mizchi/tpl",
-  "version": "0.0.7",
+  "version": "0.0.1",
   "exports": "./mod.ts",
   "tasks": {
     "build": "deno run -A build.ts",
