@@ -2,7 +2,7 @@ import { join } from 'jsr:@std/path@0.223.0';
 // ex. scripts/build_npm.ts
 import { exists } from "jsr:@std/fs@0.223.0";
 import * as dnt from "jsr:@deno/dnt@0.41.1";
-import $ from 'jsr:@david/dax';
+import $ from 'jsr:@david/dax@0.40.0';
 import { parse, increment, format, type ReleaseType } from "jsr:@std/semver@0.223.0";
 import { parseArgs } from "node:util";
 // import prettier from "npm:prettier@2.4.1";
