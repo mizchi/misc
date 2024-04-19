@@ -1,9 +1,0 @@
-{
-  "name": "@mizchi/xxx",
-  "version": "0.0.0",
-  "exports": "./mod.ts",
-  "tasks": {
-    "test": "deno test",
-    "release": "zdnt release"
-  }
-}

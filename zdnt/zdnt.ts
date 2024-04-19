@@ -7,12 +7,13 @@ import { parse, increment, format, reverseSort, type ReleaseType, compare } from
 import { path } from 'https://deno.land/x/dax@0.39.2/src/deps.ts';
 import { parseArgs } from "node:util";
 import prettier from "npm:prettier@2.4.1";
-import { expect } from 'https://deno.land/std@0.214.0/expect/expect.ts';
-import { select } from 'https://deno.land/x/dax@0.39.2/src/console/select.ts';
+import json5 from "npm:json5@2.2.0";
+import json5writer from "npm:json5-writer@0.2.0";
 
 enum UsingType {
   JSR,
-  Deno,
+  DenoJson,
+  DenoJsonc,
   PackageJson,
 }
 
@@ -58,7 +59,11 @@ export async function getModuleParams(root: string): Promise<ModuleParams> {
     },
     {
       name: "deno.json",
-      type: UsingType.Deno,
+      type: UsingType.DenoJson,
+    },
+    {
+      name: "deno.jsonc",
+      type: UsingType.DenoJsonc,
     },
     {
       name: "package.json",
@@ -86,7 +91,7 @@ export async function getModuleParams(root: string): Promise<ModuleParams> {
     }
   }
   if (await exists(join(root, "package.json"))) {
-    packageJson = JSON.parse(Deno.readTextFileSync(join(root, "package.json")));
+    packageJson = json5.parse(Deno.readTextFileSync(join(root, "package.json")));
   }
 
   return {
@@ -99,7 +104,7 @@ export async function getModuleParams(root: string): Promise<ModuleParams> {
   async function tryGetParamOfJson(fpath: string, key: string): Promise<string | undefined> {
     try {
       if (await exists(fpath)) {
-        const json = JSON.parse(Deno.readTextFileSync(fpath));
+        const json = json5.parse(Deno.readTextFileSync(fpath));
         if (json[key]) {
           return json[key];
         }
@@ -172,20 +177,27 @@ function getNextVersion(current: string, releaseType: ReleaseType): string {
   return format(increment(v, releaseType));
 }
 
-async function writeVersionInJson(fpath: string, version: string, jsonc: boolean = false) {
-  const json = JSON.parse(Deno.readTextFileSync(fpath));
-  json.version = version;
-  const formatted = prettier.format(JSON.stringify(json, null, 2), { parser: "json" });
+async function writeVersionInJson(fpath: string, version: string) {
+  const content = await Deno.readTextFile(fpath);
+  const json = json5.parse(content);
+  const writer = json5writer.load(content);
+  // json.version = version;
+  writer.write({
+    ...json,
+    version: version,
+  })
+  // const formatted = prettier.format(JSON.stringify(json, null, 2), { parser: "json" });
   if (parsed.values.dry) {
     log(`dry: writing ${fpath.replace(Deno.cwd(), "")}`)
-    console.log(formatted);
+    console.log(writer.toSource());
   } else {
     log(`writing ${fpath.replace(Deno.cwd(), "")}`)
-    await Deno.writeTextFile(fpath, formatted);
+    await Deno.writeTextFile(fpath, writer.toSource());
   }
 }
 
 const log = (str: string) => console.log(`%c[zdnt] ${str}`, "color: gray");
+
 function toReadablePath(p: string) {
   return p.replace(Deno.cwd() + "/", "");
 }
@@ -218,6 +230,7 @@ const MOD_TS = () => `// zdnt generated
 export const hello = () => "hello";
 `;
 
+
 const MOD_TEST_TS = (libname: string) => `
 import { expect } from 'https://deno.land/std@0.214.0/expect/expect.ts';
 import { hello } from "./mod.ts";
@@ -249,7 +262,7 @@ if (import.meta.main) {
     // await Deno.writeTextFile(join(root, target, "jsr.json"), JSON.stringify(
     //   { name: `@${user}/${target}`, version: "0.0.0", "exports": "./mod.ts" }
     //   , null, 2));
-    await Deno.writeTextFile(join(root, target, "deno.json"), JSON.stringify({
+    await Deno.writeTextFile(join(root, target, "deno.jsonc"), JSON.stringify({
       name: `@${user}/${target}`,
       version: "0.0.0",
       "exports": "./mod.ts",
@@ -263,6 +276,24 @@ if (import.meta.main) {
     await Deno.writeTextFile(join(root, target, "README.md"), README(user, target));
     Deno.exit(0);
   }
+
+  if (first === "check") {
+    const params = await getModuleParams(Deno.cwd());
+    if (!params.version || !params.name) throw new Error("version and name is required");
+    if (!await exists(join(root, "deno.json"))
+      || !await exists(join(root, "deno.jsonc"))
+      || !await exists(join(root, "jsr.json"))
+    ) {
+      throw new Error("deno.json(c) or jsr.json is not found");
+    }
+
+    const nextVersion = getNextVersion(params.version!, parsed.values.type as ReleaseType ?? "patch");
+    log(`version: ${params.version} -> ${nextVersion}`);
+    log(`name: ${params.name}`);
+    log(`using: ${params.using?.usingFile}`);
+    Deno.exit(0);
+  }
+
   const params = await getModuleParams(Deno.cwd());
 
   const yes = !!parsed.values.yes;
@@ -292,12 +323,13 @@ if (import.meta.main) {
     Deno.exit(0)
   }
 
+  const fname = toReadablePath(params.using?.usingFile!);
   const options = [
     {
-      id: "WRITE_JSON", text: `Write deno.json's version to ${nextVersion} `, selected: true,
+      id: "WRITE_JSON", text: `Write ${fname}'s version to ${nextVersion} `, selected: true,
     },
     { id: "WRITE_README", text: `Write README's version to ${nextVersion}`, selected: true },
-    { id: "GIT_COMMIT", text: `Git commit READEM.md and deno.json ${nextVersion}`, selected: true },
+    { id: "GIT_COMMIT", text: `Git commit READEM.md and ${fname} ${nextVersion}`, selected: true },
 
     { id: "RELEASE_JSR", text: "Release to jsr.io", selected: true },
     { id: "RELEASE_NPM", text: "Release to npm", selected: true },
@@ -329,8 +361,13 @@ if (import.meta.main) {
 
     // update README.md
     if (selectedOptions.some((o) => o.id === "GIT_COMMIT")) {
-      await $`git add README.md ${params.using.usingFile}`;
-      await $`git commit -m "v${nextVersion}"`;
+      if (parsed.values.dry) {
+        log(`dry: git add README.md ${params.using.usingFile}`);
+        log(`dry: git commit -m "${'v' + nextVersion}"`);
+      } else {
+        await $`git add README.md ${params.using.usingFile}`;
+        await $`git commit -m "${'v' + nextVersion}"`;
+      }
     }
 
     // git tag
