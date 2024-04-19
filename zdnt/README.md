@@ -3,7 +3,7 @@
 Zero Config Dnt wrapper
 
 ```
-$ deno install -Af https://jsr.io/@mizchi/zdnt@0.0.2/zdnt.ts
+$ deno install -Af https://jsr.io/@mizchi/zdnt@0.0.4/zdnt.ts
 ```
 
 ## Usage
