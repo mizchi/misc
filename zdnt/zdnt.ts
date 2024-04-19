@@ -127,6 +127,7 @@ async function getVersionFromGitTag(): Promise<string | undefined> {
 export async function build_npm(opts: ZdntOptions) {
   await dnt.emptyDir("./npm");
   await dnt.build({
+    scriptModule: false,
     entryPoints: ["./mod.ts"],
     outDir: "./npm",
     test: false,
