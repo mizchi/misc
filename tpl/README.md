@@ -3,7 +3,7 @@
 Magic inferred template (to manage my AI prompts)
 
 ```ts
-import { tpl } from "./mod.ts"
+import { tpl } from "https://jsr.io/@mizchi/tpl/0.0.2/mod.ts"
 
 const t = tpl`
 hello my template
