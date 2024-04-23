@@ -1,0 +1,15 @@
+{
+  "name": "@mizchi/vite-deno",
+  "version": "0.0.1",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "npm:react"
+  },
+  "tasks": {
+    "dev": "deno run --watch main.ts",
+    "test": "deno test -A"
+  }
+}

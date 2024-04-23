@@ -1,0 +1,19 @@
+{
+  "tasks": {
+    "test": "deno test -A"
+  },
+  "imports": {
+    "@mizchi/tpl": "jsr:@mizchi/tpl@^0.0.3"
+  },
+
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "npm:react",
+    "lib": ["deno.ns", "deno.unstable", "dom", "esnext"]
+  }
+}
