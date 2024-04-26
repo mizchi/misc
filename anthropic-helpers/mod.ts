@@ -70,12 +70,18 @@ export function createToolsHandler<T extends { name: string; input_schema: JSONS
   };
 }
 
+type MessageHandler = {
+  current: () => AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[],
+  isEnd: () => boolean,
+  handleResponse: (res: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessage) => Promise<AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[]>
+}
+
 export function createMessageHandler(options: {
   tools: AnthropicAI.Beta.Tools.Messages.Tool[],
   handleTool: (content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam>,
   handleText: (content: AnthropicAI.Messages.TextBlock) => void,
   messages: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[]
-}) {
+}): MessageHandler {
   const messages = options.messages;
   let stop_reason: "max_tokens" | "tool_use" | "end_turn" | "stop_sequence" | null = null;
   return {
