@@ -58,7 +58,6 @@ type ToolHandler<S extends JSONSchema> = (
 export function createToolsHandler<T extends { name: string; input_schema: JSONSchema }>(
   _tools: readonly T[],
   handlers: { [K in ToolName<T>]: ToolHandler<ToolSchema<Extract<T, { name: K }>>> }
-  // handlers: { [K in ToolName<T>]: ToolHandler<ToolSchema<Extract<T, { name: K }>>> }
 ): (content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam> {
   return async (content) => {
     if (content.name in handlers) {
@@ -79,11 +78,19 @@ type MessageHandler = {
 export function createMessageHandler(options: {
   tools: AnthropicAI.Beta.Tools.Messages.Tool[],
   handleTool: (content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam>,
-  handleText: (content: AnthropicAI.Messages.TextBlock) => void,
+  handleUser?: (content: AnthropicAI.Beta.Tools.ToolsBetaMessageParam) => (void | Promise<void>),
+  handleAssistant?: (content: AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock) => (void | Promise<void>),
   messages: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[]
 }): MessageHandler {
+  const handleUser = options.handleUser ?? defaultHandleUser;
+  const handleAssistant = options.handleAssistant ?? defaultHandleAssistant;
+
   const messages = options.messages;
+  for (const message of messages) {
+    handleUser(message);
+  }
   let stop_reason: "max_tokens" | "tool_use" | "end_turn" | "stop_sequence" | null = null;
+
   return {
     current: () => messages.slice(),
     isEnd: () => {
@@ -98,9 +105,7 @@ export function createMessageHandler(options: {
       messages.push({ role: 'assistant', content: res.content });
       const toolResults: AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam[] = [];
       for (const content of res.content) {
-        if (content.type === "text") {
-          options.handleText(content);
-        }
+        handleAssistant(content);
         if (content.type === "tool_use") {
           const result = await options.handleTool(content);
           toolResults.push(result);
@@ -108,10 +113,39 @@ export function createMessageHandler(options: {
       }
       stop_reason = res.stop_reason;
       if (toolResults.length > 0) {
-        messages.push({ role: 'user', content: toolResults });
+        const result: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam = { role: 'user', content: toolResults };
+        messages.push(result);
+        handleUser(result);
       }
       return messages;
     },
   }
 }
 
+export function defaultHandleAssistant(content: AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock): void {
+  if (content.type === 'tool_use') {
+    console.log('%c[tool_use]', 'color: blue;', content.name, content.input);
+  } else if (content.type === 'text') {
+    console.log(content.text);
+  } else if (typeof content === 'string') {
+    console.log(content);
+  } else {
+    console.log(JSON.stringify(content, null));
+  }
+};
+
+export function defaultHandleUser(content: AnthropicAI.Beta.Tools.ToolsBetaMessageParam): void {
+  if (Array.isArray(content.content)) {
+    for (const c of content.content) {
+      if (c.type === 'tool_result') {
+        console.log(`%c[tool_result] ${JSON.stringify(c.content, null)}`, 'color: gray;');
+      } else if (c.type === 'text') {
+        console.log(`%c${c.text}`, 'color: gray;');
+      } else {
+        console.log(`%c[${c.type}] ...`, 'color: gray;');
+      }
+    }
+  } else {
+    console.log(`%c${content.content}`, 'color: gray;');
+  }
+};

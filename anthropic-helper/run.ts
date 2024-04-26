@@ -74,13 +74,7 @@ const handleTool = createToolsHandler(TOOLS, {
 
 const handler = createMessageHandler({
   tools: TOOLS as any as AnthropicAI.Beta.Tools.Messages.Tool[],
-  handleTool: (content) => {
-    console.log(`[Tool]`, content);
-    return handleTool(content);
-  },
-  handleText: (content) => {
-    console.log(`[Assistant] ${content.text}`);
-  },
+  handleTool,
   messages: [
     {
       role: 'user',
