@@ -1,4 +1,4 @@
-# @mizchi/anthropic-helpers
+# @mizchi/anthropic-helper
 
 AnthropicAI Tools Helpers for typescript (deno).
 
@@ -6,7 +6,7 @@ https://docs.anthropic.com/claude/docs/tool-use
 
 ```ts
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
-import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helpers@0.0.1';
+import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.2';
 
 // define tools
 const TOOLS = [
