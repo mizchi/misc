@@ -6,7 +6,7 @@ https://docs.anthropic.com/claude/docs/tool-use
 
 ```ts
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
-import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.2';
+import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.3';
 
 // define tools
 const TOOLS = [

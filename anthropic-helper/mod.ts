@@ -122,6 +122,7 @@ export function createMessageHandler(options: {
   }
 }
 
+
 export function defaultHandleAssistant(content: AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock): void {
   if (content.type === 'tool_use') {
     console.log('%c[tool_use]', 'color: blue;', content.name, content.input);
@@ -130,7 +131,7 @@ export function defaultHandleAssistant(content: AnthropicAI.Beta.Tools.Messages.
   } else if (typeof content === 'string') {
     console.log(content);
   } else {
-    console.log(JSON.stringify(content, null));
+    console.log(JSON.stringify(content, null, 2));
   }
 };
 
@@ -138,9 +139,9 @@ export function defaultHandleUser(content: AnthropicAI.Beta.Tools.ToolsBetaMessa
   if (Array.isArray(content.content)) {
     for (const c of content.content) {
       if (c.type === 'tool_result') {
-        console.log(`%c[tool_result] ${JSON.stringify(c.content, null)}`, 'color: gray;');
+        console.log(`%c[tool_result] ${truncateString(JSON.stringify(c.content, null), 30)}`, 'color: gray;');
       } else if (c.type === 'text') {
-        console.log(`%c${c.text}`, 'color: gray;');
+        console.log(`%c${truncateString(c.text, 30)}`, 'color: gray;');
       } else {
         console.log(`%c[${c.type}] ...`, 'color: gray;');
       }
@@ -149,3 +150,12 @@ export function defaultHandleUser(content: AnthropicAI.Beta.Tools.ToolsBetaMessa
     console.log(`%c${content.content}`, 'color: gray;');
   }
 };
+
+function truncateString(str: string, maxLength: number): string {
+  if (str.length <= maxLength) {
+    return str;
+  } else {
+    return str.slice(0, maxLength) + "...";
+  }
+}
+
