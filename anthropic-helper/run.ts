@@ -1,20 +1,5 @@
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
-import { createMessageHandler, createToolsHandler } from './mod.ts';
-
-async function runAnthropicAITools(
-  options:
-    | Partial<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming>
-    & Pick<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming, "messages" | "tools">
-): Promise<AnthropicAI.Beta.Tools.Messages.ToolsBetaMessage> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")!;
-  const client = new AnthropicAI({ apiKey });
-  const res = await client.beta.tools.messages.create({
-    model: "claude-3-opus-20240229",
-    max_tokens: 1024,
-    ...options,
-  });
-  return res;
-}
+import { createToolRunner, createToolHandler } from './mod.ts';
 
 const TOOLS = [
   {
@@ -47,46 +32,29 @@ const TOOLS = [
   }
 ] as const;
 
-const handleTool = createToolsHandler(TOOLS, {
+const handleTool = createToolHandler(TOOLS, {
   async get_weather(input, content) {
-    const is_error = false;
-    return {
-      tool_use_id: content.id,
-      type: 'tool_result',
-      content: [
-        { type: 'text', text: 'rainy day' }
-      ],
-      is_error
-    };
+    return 'The weather is sunny.'
   },
   async get_degree(input, content) {
-    const is_error = false;
-    return {
-      tool_use_id: content.id,
-      type: 'tool_result',
-      content: [
-        { type: 'text', text: '15 degree' }
-      ],
-      is_error
-    };
+    return 'The degree is 15.';
   }
 });
 
-const handler = createMessageHandler({
-  tools: TOOLS as any as AnthropicAI.Beta.Tools.Messages.Tool[],
-  handleTool,
+const client = new AnthropicAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+const runner = createToolRunner(client, {
+  model: "claude-3-opus-20240229",
+  tools: TOOLS as any,
   messages: [
     {
       role: 'user',
       content: "What's the weather and degree in San Francisco? Say greeting messsage by weather and degree."
     }
-  ]
-});
+  ],
+  max_tokens: 1248,
+}, { handleTool });
 
-while (!handler.isEnd()) {
-  const res = await runAnthropicAITools({
-    tools: TOOLS as any,
-    messages: handler.current()
-  });
-  await handler.handleResponse(res);
-}
+await runner.run();
+
+runner.addMessage({ role: 'user', content: "I feel good" });
+await runner.run();

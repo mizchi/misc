@@ -1,4 +1,5 @@
 import { exists, existsSync } from "jsr:@std/fs@0.223.0/exists";
+
 import { join } from "jsr:@std/path";
 import type { Plugin } from "npm:vite@5.2.10";
 import json5 from "npm:json5@2.2.3";
