@@ -14,7 +14,8 @@ import {
   parseCliArgs,
   resolveRoot,
   saveHistory,
-  normalizePath
+  normalizePath,
+  getMessageFromVSCode
 } from "./cli_utils.ts";
 
 const TOOLS_ROOT = Deno.env.get('TOOLS_ROOT') ?? join(Deno.env.get("HOME")!, 'tools');
@@ -82,7 +83,16 @@ if (parsed.values.summary) {
   Deno.exit(0);
 }
 
-await runner.ask(parsed.positionals.slice(1).join(" "), parsed.values.tool_choice);
+const message = parsed.values.edit
+  ? await getMessageFromVSCode(root)
+  : parsed.positionals.length > 1
+    ? parsed.positionals.slice(1).join(" ")
+    : await getMessageFromVSCode(root);
+
+if (!message) {
+  throw new Error('No message provided.');
+}
+await runner.ask(message, parsed.values.tool_choice);
 if (!parsed.values.oneshot) {
   const current = runner.getMessages();
   await saveHistory(historyPath, current);

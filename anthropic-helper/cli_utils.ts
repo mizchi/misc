@@ -3,12 +3,18 @@ import { ToolRunner } from "./types.ts";
 import { exists } from "jsr:@std/fs@0.223.0/exists";
 import { getToolTypes } from "./utils.ts";
 import { parseArgs } from "node:util";
+import $ from "jsr:@david/dax@0.41.0";
 
 export function parseCliArgs(args: string[]) {
   const parsed = parseArgs({
     args: args,
     allowPositionals: true,
     options: {
+      edit: {
+        type: 'boolean',
+        short: 'e',
+        description: 'Flag to edit the tool',
+      },
       new: {
         type: 'boolean',
         short: 'n',
@@ -160,4 +166,17 @@ export async function getSystem(root: string): Promise<string | undefined> {
   } catch (e) {
     return undefined;
   }
+}
+
+const PLACEHOLDER = '<!-- NEW MESSAGE -->';
+export async function getMessageFromVSCode(root: string): Promise<string | undefined> {
+  const tempfile = join(root, '__scratch.md');
+  await Deno.writeTextFile(tempfile, PLACEHOLDER);
+  await $`code --wait ${tempfile}`;
+  const message = (await Deno.readTextFile(tempfile)).replace(PLACEHOLDER, '').trim();
+  if (message === '') {
+    return undefined;
+  }
+  await $`rm ${tempfile}`.noThrow();
+  return message;
 }

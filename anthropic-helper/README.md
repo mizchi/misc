@@ -4,7 +4,7 @@ AnthropicAI Tools Helpers for typescript (deno).
 
 https://docs.anthropic.com/claude/docs/tool-use
 
-## Library Mode
+## How to use
 
 ```ts
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
@@ -100,11 +100,65 @@ With both the weather and degree information available, I have all the required 
 Good morning! It's a beautiful sunny day in San Francisco with a pleasant temperature of 15 degrees. Perfect weather to get out and enjoy the city! I hope you have a wonderful day.
 ```
 
-## CLI
+## CLI with tools/*
 
 ```bash
-$ export TOOLS_ROOT=$(pwd)/Tools
-$ 
+$ deno install -Afg jsr:@mizchi/anthropic-helper@0.1.1/cli --name tools
+# Set tools root. This cli uses `<TOOLS_ROOT>/<name>/tools.ts`
+$ export TOOLS_ROOT=$(pwd)/tools
+$ tools create rag
+$ tree tools
+./tools/
+└── rag
+    ├── system.md # edit as system prompt
+    └── tools.ts  # impl tools
+$ tools rag "When is release date for Slay the Spire 2?"
+```
+
+See [./tools](./tools)
+
+You can define tools by plane typescript functions.
+
+```ts
+// You can only use simple type literal node for input.
+// Like string, number, boolean, { key: T },  Array<T>
+// Comments are used as descriptions.
+
+// Get the current weather in a given location
+export async function get_degree(
+  input: {
+    // The city and state, e.g. San Francisco, CA
+    location: string
+
+    // DO NOT USE TYPE REFERENCE
+    // foo: FooType
+  }) {
+  return `The degree is 15 at ${input.location}.`;
+}
+
+/* Expand like this...
+
+const get_degree_schema = {
+  name: "get_degree",
+  description: "Get the current degree in a given location",
+  input_schema: {
+    type: "object",
+    properties: {
+      location: {
+        type: "string",
+        description: "The city and state, e.g. San Francisco, CA"
+      }
+    },
+    required: ["location"]
+  }
+} as const satisfies AnthropicAI.Tool;
+
+const mod = await import(toolsPath);
+runner.registerTool({
+  schema: get_degree_schema,
+  handler: mod[get_degree_schema.name]
+});
+*/
 ```
 
 ## License
