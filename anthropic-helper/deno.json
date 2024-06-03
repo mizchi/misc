@@ -1,7 +1,8 @@
 {
   "name": "@mizchi/anthropic-helper",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "exports": {
-    ".": "./mod.ts"
+    ".": "./mod.ts",
+    "./cli": "./cli.ts"
   }
 }

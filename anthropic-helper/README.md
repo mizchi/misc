@@ -4,140 +4,113 @@ AnthropicAI Tools Helpers for typescript (deno).
 
 https://docs.anthropic.com/claude/docs/tool-use
 
+## Library Mode
+
 ```ts
-import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
-import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.3';
+import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
+import { buildRunner } from "./mod.ts";
 
-// define tools
-const TOOLS = [
-  {
-    name: "get_weather",
-    description: "Get the current weather in a given location",
-    input_schema: {
-      type: "object",
-      properties: {
-        location: {
-          type: "string",
-          description: "The city and state, e.g. San Francisco, CA"
-        }
-      },
-      required: ["location"]
-    }
-  },
-  {
-    name: "get_degree",
-    description: "Get the current degree in a given location",
-    input_schema: {
-      type: "object",
-      properties: {
-        location: {
-          type: "string",
-          description: "The city and state, e.g. San Francisco, CA"
-        }
-      },
-      required: ["location"]
-    }
+const get_weather_schema = {
+  name: "get_weather",
+  description: "Get the current weather in a given location",
+  input_schema: {
+    type: "object",
+    properties: {
+      location: {
+        type: "string",
+        description: "The city and state, e.g. San Francisco, CA"
+      }
+    },
+    required: ["location"]
   }
-] as const;
+} as const satisfies AnthropicAI.Tool;
 
-// implement tools by TOOLS definition
-const handleTool = createToolsHandler(TOOLS, {
-  async get_weather(input, content) {
-    const is_error = false;
-    return {
-      tool_use_id: content.id,
-      type: 'tool_result',
-      content: [
-        { type: 'text', text: 'rainy day' }
-      ],
-      is_error
-    };
-  },
-  async get_degree(input, content) {
-    const is_error = false;
-    return {
-      tool_use_id: content.id,
-      type: 'tool_result',
-      content: [
-        { type: 'text', text: '15 degree' }
-      ],
-      is_error
-    };
+const get_degree_schema = {
+  name: "get_degree",
+  description: "Get the current degree in a given location",
+  input_schema: {
+    type: "object",
+    properties: {
+      location: {
+        type: "string",
+        description: "The city and state, e.g. San Francisco, CA"
+      }
+    },
+    required: ["location"]
+  }
+} as const satisfies AnthropicAI.Tool;
+
+const client = new AnthropicAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+const runner = buildRunner(client, { stream: true });
+runner.registerTool({
+  schema: get_weather_schema,
+  async handler(input) {
+    return `The weather is sunny at ${input.location}.`;
+  }
+});
+runner.registerTool({
+  schema: get_degree_schema,
+  async handler(input) {
+    return `The degree is 15 at ${input.location}.`;
   }
 });
 
-const handler = createMessageHandler({
-  tools: TOOLS as any as AnthropicAI.Beta.Tools.Messages.Tool[],
-  handleTool: (content) => {
-    console.log(`[Tool]`, content);
-    return handleTool(content);
-  },
-  handleText: (content) => {
-    console.log(`[Assistant] ${content.text}`);
-  },
-  messages: [
-    {
-      role: 'user',
-      content: "What's the weather and degree in San Francisco? Say greeting messsage by weather and degree."
-    }
-  ]
-});
-
-async function runAnthropicAITools(
-  options:
-    | Partial<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming>
-    & Pick<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming, "messages" | "tools">
-): Promise<AnthropicAI.Beta.Tools.Messages.ToolsBetaMessage> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")!;
-  const client = new AnthropicAI({ apiKey });
-  const res = await client.beta.tools.messages.create({
-    model: "claude-3-opus-20240229",
-    max_tokens: 1024,
-    ...options,
-  });
-  return res;
-}
-
-// run until end
-while (!handler.isEnd()) {
-  const res = await runAnthropicAITools({
-    tools: TOOLS as any,
-    messages: handler.current()
-  });
-  await handler.handleResponse(res);
-}
+await runner.ask("What's the weather in San Francisco?");
+// explict tool_choice
+await runner.ask("What's the degree in San Francisco?", 'get_degree');
+await runner.ask("Say greeting by weather and degree.");
 ```
 
 Result
 
 ```bash
-$ deno run -A scratch.ts
-[Assistant] <thinking>
-The user is asking for the weather and temperature in San Francisco. To answer this, I will need to use the get_weather and get_degree functions.
+What's the weather in San Francisco?
+<thinking>
+The user is asking for the current weather in San Francisco. The relevant tool is get_weather, which requires a location parameter.
 
-For get_weather, the required location parameter is directly provided by the user - they specified "San Francisco".
+Required parameters:
+location - The user provided this in the query: "San Francisco"
 
-For get_degree, the required location parameter is also directly provided as "San Francisco".
-
-Since I have the needed location parameter, I can proceed to call both functions to get the weather and temperature information needed to answer the user's request.
+All required parameters for get_weather are available, so we can proceed with making the API call to get the current weather for San Francisco.
 </thinking>
-[Tool] {
-  type: "tool_use",
-  id: "toolu_01F5hc6LvyWpwWw4dioJYGCp",
-  name: "get_weather",
-  input: { location: "San Francisco, CA" }
-}
-[Tool] {
-  type: "tool_use",
-  id: "toolu_01ECVxB7igwMtgEQD9Egng7M",
-  name: "get_degree",
-  input: { location: "San Francisco, CA" }
-}
-[Assistant] Based on the weather and temperature information:
+[tool_use] get_weather { location: "San Francisco, CA" }
+[tool_result] The weather is sunny at San Francisco, CA.
 
-Good morning, San Francisco! It's a rainy day with a temperature of 15 degrees. Don't forget your umbrella if you're heading out. Have a great day despite the gloomy weather!
+
+Based on the weather information retrieved, the current weather in San Francisco is sunny.
+What's the degree in San Francisco?
+[tool_choice] get_degree
+
+[tool_use] get_degree { location: "San Francisco, CA" }
+[tool_result] The degree is 15 at San Francisco, CA.
+Say greeting by weather and degree.
+<thinking>
+To generate a greeting based on the current weather and temperature in San Francisco, we will need the following information:
+
+1. Current weather conditions in San Francisco 
+2. Current temperature in degrees in San Francisco
+
+I already have this information from the previous queries:
+- The current weather in San Francisco is sunny
+- The current temperature in San Francisco is 15 degrees
+
+With both the weather and degree information available, I have all the required information to generate a weather and temperature based greeting for San Francisco. No additional tool calls are needed.
+</thinking>
+
+Good morning! It's a beautiful sunny day in San Francisco with a pleasant temperature of 15 degrees. Perfect weather to get out and enjoy the city! I hope you have a wonderful day.
 ```
 
-## LICENSE
+## CLI
 
-MIT
+```bash
+$ export TOOLS_ROOT=$(pwd)/Tools
+$ 
+```
+
+## License
+
+Copyright 2024 @mizchi<miz404@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
