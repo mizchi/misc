@@ -1,4 +1,4 @@
-import type AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
+import type AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
 
 export type JSONSchema = {
   type: 'string' | 'number' | 'boolean' | 'object' | 'array';
@@ -23,27 +23,6 @@ type ToType<T> = T extends { type: 'string' }
 
 export type SchemaToType<T extends JSONSchema> = ToType<T>;
 
-if (import.meta.main) {
-  const personSchema = {
-    type: 'object',
-    properties: {
-      name: { type: 'string' },
-      age: { type: 'number' },
-      hobbies: {
-        type: 'array',
-        items: { type: 'string' }
-      }
-    },
-    required: ['name', 'age']
-  } as const;
-  type Person = SchemaToType<typeof personSchema>;
-  const _person: Person = {
-    name: 'Alice',
-    age: 30,
-    hobbies: ['reading', 'swimming']
-  };
-}
-
 type ToolName<T> = T extends { name: infer N } ? N : never;
 
 type ToolSchema<T> = T extends { input_schema: infer S } ? S : never;
@@ -52,13 +31,13 @@ type ToolInput<S extends JSONSchema> = SchemaToType<S>;
 
 type ToolHandler<S extends JSONSchema> = (
   input: ToolInput<S>,
-  content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock
-) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam | string>;
+  content: AnthropicAI.Messages.ToolUseBlock
+) => Promise<AnthropicAI.Messages.ToolResultBlockParam | string>;
 
 export function createToolHandler<T extends { name: string; input_schema: JSONSchema }>(
   _tools: readonly T[],
   handlers: { [K in ToolName<T>]: ToolHandler<ToolSchema<Extract<T, { name: K }>>> }
-): (content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam | string> {
+): (content: AnthropicAI.Messages.ToolUseBlock) => Promise<AnthropicAI.Messages.ToolResultBlockParam | string> {
   return async (content) => {
     if (content.name in handlers) {
       const handler = handlers[content.name as ToolName<T>];
@@ -70,35 +49,38 @@ export function createToolHandler<T extends { name: string; input_schema: JSONSc
 }
 
 type ToolRunner = {
-  current: () => AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[],
-  addMessage(newMessage: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam): void,
+  current: () => AnthropicAI.Messages.MessageParam[],
+  addMessage(newMessage: AnthropicAI.Messages.MessageParam): void,
   isEndTurn: () => boolean,
   run(): Promise<void>,
   step(): Promise<void>,
-  handleResponse: () => Promise<AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[]>
+  handleResponse: () => Promise<AnthropicAI.Messages.MessageParam[]>
 }
 
 function mergeMessages(
-  messages: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[],
-  next: AnthropicAI.Beta.Tools.ToolsBetaMessageParam
-): AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam[] {
+  messages: AnthropicAI.Messages.MessageParam[],
+  next: AnthropicAI.MessageParam
+): AnthropicAI.Messages.MessageParam[] {
   const last = messages.at(-1);
   if (
-    last?.role === 'assistant'
-    && next.role === 'assistant'
+    last?.role === 'assistant' && next.role === 'assistant'
     && (
       typeof next.content === 'string'
       || (typeof next.content !== 'string' && next.content[0].type === 'text')
     )
   ) {
-    const firstText = typeof last.content[0] === 'string' ? last.content[0] : last.content[0].type === 'text' ? last.content[0].text : '';
-    const secondText = typeof next.content[0] === 'string' ? next.content[0] : next.content[0].type === 'text' ? next.content[0].text : '';
+    const firstText = typeof last.content[0] === 'string'
+      ? last.content[0]
+      : last.content[0].type === 'text' ? last.content[0].text : '';
+    const secondText = typeof next.content[0] === 'string'
+      ? next.content[0]
+      : next.content[0].type === 'text' ? next.content[0].text : '';
     return [...messages.slice(0, -1), {
       role: 'assistant',
       content: [
-        { type: 'text', text: firstText + secondText } as AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock,
+        { type: 'text', text: firstText + secondText } as AnthropicAI.Messages.ContentBlock,
         ...next.content.slice(1)
-      ] as AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock[]
+      ] as AnthropicAI.Messages.ContentBlock[]
     }];
   }
   return [
@@ -113,11 +95,11 @@ function mergeMessages(
 // TODO: Support stream if anthropic-ai/sdk supports it
 export function createToolRunner(
   client: AnthropicAI,
-  options: AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming,
+  options: AnthropicAI.Messages.MessageCreateParamsNonStreaming,
   handlers: {
-    handleTool: (content: AnthropicAI.Beta.Tools.Messages.ToolUseBlock) => Promise<AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam | string>,
-    handleUser?: (content: AnthropicAI.Beta.Tools.ToolsBetaMessageParam) => (void | Promise<void>),
-    handleAssistant?: (content: AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock) => (void | Promise<void>),
+    handleTool: (content: AnthropicAI.Messages.ToolUseBlock) => Promise<AnthropicAI.Messages.ToolResultBlockParam | string>,
+    handleUser?: (content: AnthropicAI.MessageParam) => (void | Promise<void>),
+    handleAssistant?: (content: AnthropicAI.Messages.ContentBlock) => (void | Promise<void>),
   }
 ): ToolRunner {
   const handleUser = handlers.handleUser ?? defaultHandleUser;
@@ -144,7 +126,7 @@ export function createToolRunner(
     },
     async step() {
       stop_reason = null;
-      const res = await client.beta.tools.messages.create({
+      const res = await client.messages.create({
         ...options,
         messages: this.current()
       });
@@ -156,29 +138,28 @@ export function createToolRunner(
       return false;
     },
     async handleResponse() {
-      const res = messages.at(-1) as AnthropicAI.Beta.Tools.Messages.ToolsBetaMessage;
-      const toolResults: AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam[] = [];
+      const res = messages.at(-1) as AnthropicAI.Messages.Message;
+      const toolResults: AnthropicAI.Messages.ToolResultBlockParam[] = [];
       for (const content of res.content) {
         handleAssistant(content);
         if (content.type === "tool_use") {
           try {
             const result = await handlers.handleTool(content);
             if (typeof result === 'string') {
-              const toolSuccess: AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam = {
+              toolResults.push({
                 tool_use_id: content.id,
                 type: 'tool_result',
                 content: [
                   { type: 'text', text: result }
                 ],
                 is_error: false
-              };
-              toolResults.push(toolSuccess);
+              });
             } else {
               toolResults.push(result);
             }
           } catch (e) {
             if (e instanceof Error) {
-              const toolError: AnthropicAI.Beta.Tools.Messages.ToolResultBlockParam = {
+              const toolError: AnthropicAI.Messages.ToolResultBlockParam = {
                 tool_use_id: content.id,
                 type: 'tool_result',
                 content: [
@@ -195,7 +176,7 @@ export function createToolRunner(
       }
       // stop_reason = res.stop_reason;
       if (toolResults.length > 0) {
-        const result: AnthropicAI.Beta.Tools.Messages.ToolsBetaMessageParam = { role: 'user', content: toolResults };
+        const result: AnthropicAI.Messages.MessageParam = { role: 'user', content: toolResults };
         messages.push(result);
         handleUser(result);
       }
@@ -204,7 +185,7 @@ export function createToolRunner(
   }
 }
 
-export function defaultHandleAssistant(content: AnthropicAI.Beta.Tools.Messages.ToolsBetaContentBlock): void {
+export function defaultHandleAssistant(content: AnthropicAI.Messages.ContentBlock): void {
   if (content.type === 'tool_use') {
     console.log('%c[tool_use]', 'color: blue;', content.name, content.input);
   } else if (content.type === 'text') {
@@ -216,7 +197,7 @@ export function defaultHandleAssistant(content: AnthropicAI.Beta.Tools.Messages.
   }
 };
 
-export function defaultHandleUser(content: AnthropicAI.Beta.Tools.ToolsBetaMessageParam): void {
+export function defaultHandleUser(content: AnthropicAI.MessageParam): void {
   if (Array.isArray(content.content)) {
     for (const c of content.content) {
       if (c.type === 'tool_result') {
@@ -305,16 +286,50 @@ export function createChatRunner(
       progress = null;
       const last = messages.at(-1);
       if (last?.role === 'assistant') {
-        messages = [...messages.slice(0, -1), { role: 'assistant', content: last.content + finalMessage.content[0].text }];
+        if (finalMessage.content[0].type === 'text') {
+          messages = [...messages.slice(0, -1), { role: 'assistant', content: last.content + finalMessage.content[0].text }];
+        } else {
+          throw new Error('Unexpected content type');
+          // wip
+        }
       } else {
-        messages.push({ role: 'assistant', content: finalMessage.content[0].text });
+        if (finalMessage.content[0].type === 'text') {
+          messages.push({ role: 'assistant', content: finalMessage.content[0].text });
+        } else {
+          throw new Error('Unexpected content type');
+        }
       }
       stream = undefined;
-      return {
-        done: finalMessage.stop_reason === 'end_turn',
-        result: finalMessage.content[0].text,
+      if (finalMessage.content[0].type === 'text') {
+        return {
+          done: finalMessage.stop_reason === 'end_turn',
+          result: finalMessage.content[0].text,
+        }
+      } else {
+        throw new Error('Unexpected content type');
       }
     }
   }
-
 }
+
+if (import.meta.main) {
+  const personSchema = {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      age: { type: 'number' },
+      hobbies: {
+        type: 'array',
+        items: { type: 'string' }
+      }
+    },
+    required: ['name', 'age']
+  } as const;
+  type Person = SchemaToType<typeof personSchema>;
+  const _person: Person = {
+    name: 'Alice',
+    age: 30,
+    hobbies: ['reading', 'swimming']
+  };
+}
+

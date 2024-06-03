@@ -1,4 +1,4 @@
-import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
+import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
 import { createToolRunner, createToolHandler } from './mod.ts';
 
 const TOOLS = [

@@ -1,8 +1,9 @@
-import AnthropicAI from "npm:@anthropic-ai/sdk@0.20.7";
-import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.3';
-// import { createMessageHandler, createToolsHandler } from '../mod.ts'
+import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
+// import { createMessageHandler, createToolsHandler } from 'jsr:@mizchi/anthropic-helper@0.0.3';
+import { createToolHandler, createToolRunner } from '../mod.ts';
 
 import { extractMainContent, searchGoogle } from "./tools.ts";
+// import { createChatRunner } from "../mod.ts";
 
 const system = `
 あなたは優秀なアシスタントです。あなたはユーザーからの質問に可能な限り正確に答えることができます。
@@ -13,23 +14,36 @@ URL について聞かれた場合は、その URL を開いて本文を取得�
 `;
 
 
-async function runAnthropicAITools(
-  options:
-    | Partial<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming>
-    & Pick<AnthropicAI.Beta.Tools.Messages.MessageCreateParamsNonStreaming, "messages" | "tools">
-): Promise<AnthropicAI.Beta.Tools.Messages.ToolsBetaMessage> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY")!;
-  const client = new AnthropicAI({ apiKey });
-  const res = await client.beta.tools.messages.create({
-    model: "claude-3-opus-20240229",
-    max_tokens: 1024,
-    system,
-    ...options,
-  });
-  return res;
-}
-
 const TOOLS = [
+  {
+    name: "read_file",
+    description: "Read file contents",
+    input_schema: {
+      type: "object",
+      properties: {
+        filepath: {
+          type: "string",
+          description: "file path to read"
+        }
+      },
+      required: ["filepath"]
+    }
+  },
+  {
+    name: "glob",
+    description: "List files in the directory",
+    input_schema: {
+      type: "object",
+      properties: {
+        pattern: {
+          type: "string",
+          description: "glob pattern"
+        }
+      },
+      required: ["pattern"]
+    }
+  },
+
   {
     name: "ask_to_user",
     description: "Ask to user and get response. If you feel given message is not enough, you can use this tool.",
@@ -75,9 +89,13 @@ const TOOLS = [
 
 ] as const;
 
-const handleTool = createToolsHandler(TOOLS, {
+const handleTool = createToolHandler(TOOLS, {
+  async glob(input, content) {
+    return input.pattern;
+  },
   async ask_to_user(input, content) {
     const res = prompt(input.question);
+    // return 'no answer';
     return {
       tool_use_id: content.id,
       type: 'tool_result',
@@ -87,68 +105,64 @@ const handleTool = createToolsHandler(TOOLS, {
       is_error: false
     };
   },
+  async read_file(input): Promise<string> {
+    const content = Deno.readTextFileSync(input.filepath);
+    return content;
+  },
   async search_google(input, content) {
     try {
       const result = await searchGoogle(input.query);
-      return {
-        tool_use_id: content.id,
-        type: 'tool_result',
-        content: [
-          { type: 'text', text: JSON.stringify(result, null, 2) }
-        ],
-        is_error: false
-      };
+      return JSON.stringify(result, null, 2);
     } catch (err) {
-      return {
-        tool_use_id: content.id,
-        type: 'tool_result',
-        content: [
-          { type: 'text', text: 'failed to search' }
-        ],
-        is_error: true
-      };
+      throw new Error('failed to search');
     }
   },
   async open_url(input, content) {
     try {
       const res = await fetch(input.url).then((res) => res.text());
       const main = extractMainContent(res) || res;
-      return {
-        tool_use_id: content.id,
-        type: 'tool_result',
-        content: [
-          { type: 'text', text: main }
-        ],
-        is_error: false
-      };
+      return main;
     } catch (err) {
-      return {
-        tool_use_id: content.id,
-        type: 'tool_result',
-        content: [
-          { type: 'text', text: 'failed to fetch' }
-        ],
-        is_error: true
-      };
+      throw new Error('failed to fetch');
     }
   },
 });
 
-const handler = createMessageHandler({
-  tools: TOOLS as any as AnthropicAI.Beta.Tools.Messages.Tool[],
-  handleTool,
+const client = new AnthropicAI({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
+
+const runner = createToolRunner(client, {
+  model: "claude-3-opus-20240229",
+  tools: TOOLS as any,
   messages: [
     {
       role: 'user',
-      content: Deno.args.join(" ")
+      content: "What's the weather and degree in San Francisco? Say greeting messsage by weather and degree."
     }
-  ]
-});
+  ],
+  max_tokens: 1248,
+}, { handleTool });
 
-while (!handler.isEnd()) {
-  const res = await runAnthropicAITools({
-    tools: TOOLS as any,
-    messages: handler.current()
-  });
-  await handler.handleResponse(res);
-}
+await runner.run();
+
+// const handler = createChatRunner(
+//   client,
+//   {
+//     tools: TOOLS as any as AnthropicAI.Beta.Tools.Messages.Tool[],
+//     handleTool,
+//     messages: [
+//       {
+//         role: 'user',
+//         content: Deno.args.join(" ")
+//       }
+//     ]
+//   }, undefined, {
+//     handleTool,
+//   });
+
+// while (!handler.isEnd()) {
+//   const res = await runAnthropicAITools({
+//     tools: TOOLS as any,
+//     messages: handler.current()
+//   });
+//   await handler.handleResponse(res);
+// }
