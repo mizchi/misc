@@ -8,7 +8,7 @@ https://docs.anthropic.com/claude/docs/tool-use
 
 ```ts
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
-import { buildRunner } from "@mizchi/anthropic-helper@0.1.2";
+import { buildRunner } from "@mizchi/anthropic-helper@0.1.3";
 
 const get_weather_schema = {
   name: "get_weather",
@@ -103,7 +103,7 @@ Good morning! It's a beautiful sunny day in San Francisco with a pleasant temper
 ## CLI with tools/*
 
 ```bash
-$ deno install -Afg jsr:@mizchi/anthropic-helper@0.1.1/cli --name tools
+$ deno install -Afg jsr:@mizchi/anthropic-helper@0.1.3/cli --name tools
 # Set tools root. This cli uses `<TOOLS_ROOT>/<name>/tools.ts`
 $ export TOOLS_ROOT=$(pwd)/tools
 $ tools create rag
