@@ -8,7 +8,7 @@ https://docs.anthropic.com/claude/docs/tool-use
 
 ```ts
 import AnthropicAI from "npm:@anthropic-ai/sdk@0.22.0";
-import { buildRunner } from "./mod.ts";
+import { buildRunner } from "@mizchi/anthropic-helper@0.1.2";
 
 const get_weather_schema = {
   name: "get_weather",
