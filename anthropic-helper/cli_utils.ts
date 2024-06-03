@@ -137,7 +137,9 @@ export async function loadTools(root: string, runner: ToolRunner) {
     }
     const content = await Deno.readTextFile(filepath);
     const toolTypes = getToolTypes(content);
-    const impls = await import(filepath);
+
+    // to local import path
+    const impls = await import(new URL(filepath, 'file://').href);
     for (const tool of toolTypes) {
       const impl = impls[tool.name];
       runner.registerTool({
