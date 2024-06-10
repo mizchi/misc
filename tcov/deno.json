@@ -1,0 +1,9 @@
+{
+  "name": "@mizchi/tcov",
+  "exports": {
+    ".": "./cli.ts"
+  },
+  "tasks": {
+    "play": "deno test -A --coverage && deno coverage"
+  }
+}
