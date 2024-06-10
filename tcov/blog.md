@@ -580,7 +580,7 @@ https://docs.rs/ariadne/latest/ariadne/
 
 このプログラムを実行する。
 
-````bash
+```bash
 $ deno run -A line-edit.ts
 3:   return a + b;
 _: import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
@@ -602,7 +602,7 @@ Deno.test("add function", () => {
   assertEquals(add(-1, 1), 0);
   assertEquals(add(-1, -1), -2);
 });
-````
+```
 
 なんとか動いた。
 ちなみにこのテストコード自体も実行できた。
