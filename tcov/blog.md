@@ -582,7 +582,6 @@ https://docs.rs/ariadne/latest/ariadne/
 
 ````bash
 $ deno run -A line-edit.ts
-```ts
 3:   return a + b;
 _: import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 +:
@@ -591,7 +590,6 @@ _: import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 +:   assertEquals(add(-1, 1), 0);
 +:   assertEquals(add(-1, -1), -2);
 +: });
-```
 == fixed code ==
 import { assertEquals } from "https://deno.land/std/testing/asserts.ts";
 
